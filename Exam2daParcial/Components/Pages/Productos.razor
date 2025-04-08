@@ -1,47 +1,56 @@
-﻿@page "/productos"
+﻿@page "/"
+@rendermode InteractiveServer
 
 <PageTitle>Productos</PageTitle>
 
 <h1>Productos</h1>
 
-<EditForm Model="_product" OnValidSubmit="Save" class="mb-5">
+<EditForm Model="_producto" FormName="frmTienda" OnValidSubmit="Guardar" class="mb-5">
     <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <div class="alert alert-danger">@error</div>
+    }
 
     <div class="mb-3">
         <label class="form-label">Inventario</label>
-        <InputNumber @bind-Value="_product.Inventario" class="form-control" placeholder="Mayor a 0" />
+        <InputNumber @bind-Value="_producto.Inventario" class="form-control" />
     </div>
 
     <div class="mb-3">
         <label class="form-label">Nombre</label>
-        <InputText @bind-Value="_product.Nombre" class="form-control" placeholder="Nombre del producto" />
+        <InputText @bind-Value="_producto.Nombre" class="form-control" placeholder="Nombre del producto" />
     </div>
 
     <div class="mb-3">
         <label class="form-label">Departamento</label>
-        <InputRadioGroup @bind-Value="_product.Departamento" class="d-block">
+        <InputRadioGroup @bind-Value="_producto.Departamento" class="d-block">
             <div class="form-check">
-                <InputRadio class="form-check-input" Value="Frutas" id="depFrutas" />
+                <InputRadio Value="@( "Frutas" )" class="form-check-input" id="depFrutas" />
                 <label class="form-check-label" for="depFrutas">Frutas</label>
             </div>
             <div class="form-check">
-                <InputRadio class="form-check-input" Value="Verduras" id="depVerduras" />
+                <InputRadio Value="@( "Verduras" )" class="form-check-input" id="depVerduras" />
                 <label class="form-check-label" for="depVerduras">Verduras</label>
             </div>
             <div class="form-check">
-                <InputRadio class="form-check-input" Value="Lácteos" id="depLacteos" />
+                <InputRadio Value="@( "Lácteos" )" class="form-check-input" id="depLacteos" />
                 <label class="form-check-label" for="depLacteos">Lácteos</label>
             </div>
         </InputRadioGroup>
     </div>
 
-    <button type="submit" class="btn btn-primary">Agregar</button>
+    <button type="submit" class="btn btn-primary">@(_isEditing ? "Actualizar" : "Agregar")</button>
+
 </EditForm>
 
 <hr />
 
 <h3>Lista de productos agregados</h3>
-@if (_store.Count == 0)
+
+@if (_tienda.Count == 0)
 {
     <p>No hay productos aún.</p>
 }
@@ -53,42 +62,62 @@ else
                 <th>Nombre</th>
                 <th>Inventario</th>
                 <th>Departamento</th>
+                <th>Acciones</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var item in _store)
+            @foreach (var item in _tienda)
             {
-                <tr>
+                <tr @key=item>
                     <td>@item.Nombre</td>
                     <td>@item.Inventario</td>
                     <td>@item.Departamento</td>
+                    <td>
+                        <button type="button" @onclick="(()=>Eliminar(item))">Eliminar</button>
+                        <button type="button" @onclick="(()=>Editar(item))">Editar</button>
+                    </td>
                 </tr>
             }
         </tbody>
     </table>
 }
 
-@code {
-    private Product _product = new();
-    private List<Product> _store = new();
+@code
+{
+    private Producto _producto = new();
+    private List<Producto> _tienda = new();
+    private bool _isEditing = false;
+    private string error = "";
 
-    private void Save(EditContext context)
+    private void Guardar()
     {
-        _store.Add(new Product
+        if (_tienda.Any(p => p.Inventario == _producto.Inventario) && _isEditing == false)
+        {
+            error = "Este producto ya ha sido agregado.";
+        }
+        else
+        {
+            if (_isEditing)
             {
-                Inventario = _product.Inventario,
-                Nombre = _product.Nombre,
-                Departamento = _product.Departamento
-            });
+                Eliminar(_producto);
+            }
 
-        _product = new(); // Limpia el formulario después de guardar
+            _tienda.Add(_producto);
+            _tienda.Sort((p1, p2) => p1.Inventario.CompareTo(p2.Inventario));
+            _producto = new Producto(); 
+            _isEditing = false;
+            error = ""; 
+        }
     }
 
-    public class Product
+    private void Eliminar(Producto producto)
     {
-        public int Inventario { get; set; }
-        public string Nombre { get; set; } = "";
-        public string Departamento { get; set; } = "";
+        _tienda.Remove(producto);
+    }
+
+    private void Editar(Producto producto)
+    {
+        _producto = producto;
+        _isEditing = true;
     }
 }
-
